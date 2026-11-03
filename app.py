@@ -27,12 +27,19 @@ if st.button("Execute Quantitative Run"):
         
         with st.spinner("Connecting to exchange endpoints..."):
             # -------------------------------------------------------------
-            # STEP A: THE ACCURATE FINNHUB API CONNECTOR
+            # STEP A: THE ACCURATE FINNHUB API CONNECTOR (FIXED)
             # -------------------------------------------------------------
             status_box.info(f"🤖 Tool Execution: Streaming live quotes for {ticker} from Finnhub...")
             
             try:
-                url = f"https://finnhub.io{ticker}&token={FINNHUB_KEY}"
+                # FIXED: Structural string layout prevents domain truncation or concatenation bugs
+                protocol = "https://"
+                domain = "finnhub.io"
+                endpoint = "/api/v1/quote"
+                query = f"?symbol={ticker}&token={FINNHUB_KEY}"
+                
+                # Assembly: https://finnhub.io
+                url = protocol + domain + endpoint + query
                 
                 req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
                 response_data = urllib.request.urlopen(req).read()
@@ -45,14 +52,7 @@ if st.button("Execute Quantitative Run"):
                 current_price = float(data["c"])      
                 dollar_change = float(data["d"])      
                 daily_change_pct = float(data["dp"])  
-                
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric(label=f"{ticker} Live Price", value=f"${current_price:,.2f}")
-                with col2:
-                    st.metric(label="Session Change ($)", value=f"${dollar_change:+,.2f}", delta=f"{daily_change_pct:+.2f}%")
-                with col3:
-                    st.metric(label="Data Integrity", value="Verified Live", delta="100% Authentic")
+
                 
                 # -------------------------------------------------------------
                 # STEP B: PRODUCTION TEXT CONTEXT EXTRACTION
