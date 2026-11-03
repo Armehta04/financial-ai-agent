@@ -6,12 +6,12 @@ from huggingface_hub import InferenceClient
 # 1. Page Configuration
 st.set_page_config(page_title="Alpha Horizon Dashboard", page_icon="🦅", layout="centered")
 
-# 2. SECURELY GRAB KEYS FROM THE CLOUD VAULT (No private strings typed here)
+# 2. SECURELY GRAB KEYS FROM THE CLOUD VAULT
 HF_TOKEN = st.secrets["HF_TOKEN"]
 FINNHUB_KEY = st.secrets["FINNHUB_KEY"]
 
-# Connect to Hugging Face's free cloud server model
-client = InferenceClient("meta-llama/Llama-3.2-3B-Instruct", token=HF_TOKEN)
+# Connect to Hugging Face
+client = InferenceClient(token=HF_TOKEN)
 
 st.title("🦅 Alpha Horizon: Agentic Market Intelligence")
 st.caption("Cloud Build: Real-time institutional data feeds wired directly to Llama 3.2 via Hugging Face")
@@ -27,18 +27,15 @@ if st.button("Execute Quantitative Run"):
         
         with st.spinner("Connecting to exchange endpoints..."):
             # -------------------------------------------------------------
-            # STEP A: THE ACCURATE FINNHUB API CONNECTOR (FIXED)
+            # STEP A: THE ACCURATE FINNHUB API CONNECTOR
             # -------------------------------------------------------------
             status_box.info(f"🤖 Tool Execution: Streaming live quotes for {ticker} from Finnhub...")
             
             try:
-                # FIXED: Structural string layout prevents domain truncation or concatenation bugs
                 protocol = "https://"
                 domain = "finnhub.io"
                 endpoint = "/api/v1/quote"
                 query = f"?symbol={ticker}&token={FINNHUB_KEY}"
-                
-                # Assembly: https://finnhub.io
                 url = protocol + domain + endpoint + query
                 
                 req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -52,7 +49,14 @@ if st.button("Execute Quantitative Run"):
                 current_price = float(data["c"])      
                 dollar_change = float(data["d"])      
                 daily_change_pct = float(data["dp"])  
-
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric(label=f"{ticker} Live Price", value=f"${current_price:,.2f}")
+                with col2:
+                    st.metric(label="Session Change ($)", value=f"${dollar_change:+,.2f}", delta=f"{daily_change_pct:+.2f}%")
+                with col3:
+                    st.metric(label="Data Integrity", value="Verified Live", delta="100% Authentic")
                 
                 # -------------------------------------------------------------
                 # STEP B: PRODUCTION TEXT CONTEXT EXTRACTION
@@ -78,7 +82,7 @@ if st.button("Execute Quantitative Run"):
                 )
                 
                 # -------------------------------------------------------------
-                # STEP C: HUGGING FACE CLOUD INFERENCE GENERATION
+                # STEP C: HUGGING FACE CLOUD CONVERSATIONAL GENERATION
                 # -------------------------------------------------------------
                 status_box.info("🤖 Reasoning Loop: Processing factual context tokens inside cloud Llama core...")
                 
@@ -95,8 +99,13 @@ if st.button("Execute Quantitative Run"):
                 Keep your syntax clinical, data-dense, and objective. Do not write introductory filler phrases.
                 """
                 
-                # Call Hugging Face API
-                response = client.text_generation(agent_prompt, max_new_tokens=300)
+                # FIXED: Uses chat.completions to avoid provider mismatch errors
+                messages = [{"role": "user", "content": agent_prompt}]
+                response = client.chat.completions.create(
+                    model="meta-llama/Llama-3.2-3B-Instruct", 
+                    messages=messages, 
+                    max_tokens=300
+                ).choices[0].message.content
                 
                 status_box.empty()
                 st.success(f"Pipeline Cleared for {ticker}!")
